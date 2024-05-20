@@ -83,16 +83,21 @@ def parse_input(user_input):
     return cmd, *args
 
 @input_error
-def get_upcoming_birthdays(contacts):
+def get_upcoming_birthdays(contacts, days=7):
     upcoming_birthdays = []
     today = datetime.today()
     for contact in contacts:
         if contact.birthday:
-            next_birthday = datetime(today.year, contact.birthday.value.month, contact.birthday.value.day)
-            if next_birthday < today:
-                next_birthday = next_birthday.replace(year=today.year + 1)
-            if next_birthday - today <= timedelta(days=7):
-                upcoming_birthdays.append(contact)
+            birthday_this_year = contact.birthday.value.replace(year=today.year)
+            if birthday_this_year < today:
+                birthday_this_year = contact.birthday.value.replace(year=today.year + 1)
+            if 0 <= (birthday_this_year - today).days <= days:
+                if birthday_this_year.weekday() == 5: # субота
+                    birthday_this_year += timedelta(days=2)
+                elif birthday_this_year.weekday() == 6: # неділя
+                    birthday_this_year += timedelta(days=1)
+
+                upcoming_birthdays.append({"name": contact.name.value, "congratulation_date": birthday_this_year.strftime('%d.%m.%Y')})
     return upcoming_birthdays
 
 @input_error
@@ -157,7 +162,7 @@ def show_birthday(args, book: AddressBook):
 def birthdays(_, book: AddressBook):
     upcoming_birthdays = get_upcoming_birthdays(book.contacts)
     if upcoming_birthdays:
-        return "\n".join(contact.name.value + ": " + contact.birthday.value.strftime('%d.%m.%Y') for contact in upcoming_birthdays)
+        return "\n".join(contact["name"] + ": " + contact["congratulation_date"] for contact in upcoming_birthdays)
     else:
         return "No upcoming birthdays."
 
